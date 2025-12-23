@@ -1,23 +1,24 @@
-from flask import Flask, request, render_template
-from werkzeug.utils import secure_filename
-import os
-from PIL import Image
-import numpy as np
+from flask import Flask, render_template, request
 import tensorflow as tf
+import numpy as np
+from PIL import Image
+import os
 
-# -----------------------------
-# Flask App Setup
-# -----------------------------
+# -----------------------
+# Flask app
+# -----------------------
 app = Flask(__name__)
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# -----------------------------
-# Load Model + Classes
-# -----------------------------
-model = tf.keras.models.load_model("crop_disease_model.h5")
+# -----------------------
+# Load model ONCE (IMPORTANT)
+# -----------------------
+MODEL_PATH = "crop_disease_cnn_model.h5"
 
+model = tf.keras.models.load_model(MODEL_PATH)
+
+# -----------------------
+# Class labels (CHANGE according to your training)
+# -----------------------
 class_names = [
     "Bacterial leaf blight",
     "Blight",
@@ -31,39 +32,42 @@ class_names = [
     "healthy"
 ]
 
-# -----------------------------
-# Prediction Function
-# -----------------------------
-def predict_image(image_path):
-    img = Image.open(image_path).convert("RGB")
-    img = img.resize((224, 224))
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+# -----------------------
+# Home route
+# -----------------------
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
 
-    preds = model.predict(img_array)
-    class_index = np.argmax(preds)
-    confidence = np.max(preds)
-    return class_names[class_index], confidence
+# -----------------------
+# Predict route
+# -----------------------
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        if "file" not in request.files:
+            return "No file uploaded"
 
-# -----------------------------
-# Routes
-# -----------------------------
-@app.route("/", methods=["GET", "POST"])
-def home():
-    if request.method == "POST":
         file = request.files["file"]
-        if file:
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(filepath)
 
-            label, conf = predict_image(filepath)
-            return render_template("index.html", label=label, confidence=conf)
+        # Image preprocessing
+        img = Image.open(file).convert("RGB")
+        img = img.resize((224, 224))
 
-    return render_template("index.html", label=None)
+        img_array = np.array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
 
-# -----------------------------
-# Run App
-# -----------------------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+        # Prediction
+        prediction = model.predict(img_array)
+        class_index = int(np.argmax(prediction))
+        result = class_labels[class_index]
+
+        return render_template("index.html", prediction=result)
+
+    except Exception as e:
+        return f"Error occurred: {e}"
+
+# -----------------------
+# DO NOT use app.run()
+# Render uses gunicorn
+# -----------------------
