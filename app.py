@@ -12,7 +12,7 @@ app = Flask(__name__)
 # -----------------------
 # Load model ONCE (IMPORTANT)
 # -----------------------
-MODEL_PATH = "crop_disease_cnn_model.h5"
+MODEL_PATH = "crop_disease_model.h5"
 
 model = tf.keras.models.load_model(MODEL_PATH)
 
