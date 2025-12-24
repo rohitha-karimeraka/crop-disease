@@ -6,25 +6,28 @@ import os
 
 app = Flask(__name__)
 
-# Model path
 MODEL_PATH = "crop_disease_model.h5"
+model = None   # 👈 IMPORTANT
 
-# Load model
-model = tf.keras.models.load_model(MODEL_PATH)
-
-# Class names
 class_names = [
     "Bacterial leaf blight",
     "Blight",
     "Brown spot",
-    "Common Rust",
-    "Gray Leaf Spot",
+    "Common_Rust",
+    "Gray_Leaf_Spot",
     "Leaf smut",
-    "Bacterial Blight",
-    "Curl Virus",
-    "Fusarium Wilt",
-    "Healthy"
+    "bacterial_blight",
+    "curl_virus",
+    "fussarium_wilt",
+    "healthy"
 ]
+
+def load_model_once():
+    global model
+    if model is None:
+        print("Loading model...")
+        model = tf.keras.models.load_model(MODEL_PATH)
+        print("Model loaded")
 
 @app.route("/")
 def index():
@@ -32,17 +35,15 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    load_model_once()   # 👈 model first request lo load avvutundi
+
     if "image" not in request.files:
         return "No file uploaded"
 
     file = request.files["image"]
 
-    if file.filename == "":
-        return "No file selected"
-
     img = Image.open(file).convert("RGB")
     img = img.resize((224, 224))
-
     img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
@@ -51,5 +52,3 @@ def predict():
     result = class_names[class_index]
 
     return render_template("index.html", label=result)
-
-# ❌ app.run() use cheyyoddu (Render lo)
