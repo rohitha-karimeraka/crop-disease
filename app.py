@@ -10,14 +10,13 @@ import os
 app = Flask(__name__)
 
 # -----------------------
-# Load model ONCE (IMPORTANT)
+# Load model
 # -----------------------
 MODEL_PATH = "crop_disease_model.h5"
-
 model = tf.keras.models.load_model(MODEL_PATH)
 
 # -----------------------
-# Class labels (CHANGE according to your training)
+# Class labels
 # -----------------------
 class_names = [
     "Bacterial leaf blight",
@@ -44,30 +43,25 @@ def index():
 # -----------------------
 @app.route("/predict", methods=["POST"])
 def predict():
-    try:
-        if "file" not in request.files:
-            return "No file uploaded"
 
-        file = request.files["file"]
+    if "image" not in request.files:
+        return "No file uploaded"
 
-        # Image preprocessing
-        img = Image.open(file).convert("RGB")
-        img = img.resize((224, 224))
+    file = request.files["image"]
 
-        img_array = np.array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
+    if file.filename == "":
+        return "No file selected"
 
-        # Prediction
-        prediction = model.predict(img_array)
-        class_index = int(np.argmax(prediction))
-        result = class_labels[class_index]
+    # Image preprocessing
+    img = Image.open(file).convert("RGB")
+    img = img.resize((224, 224))
 
-        return render_template("index.html", prediction=result)
+    img_array = np.array(img) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
 
-    except Exception as e:
-        return f"Error occurred: {e}"
+    # Prediction
+    prediction = model.predict(img_array)
+    class_index = int(np.argmax(prediction))
+    result = class_names[class_index]
 
-# -----------------------
-# DO NOT use app.run()
-# Render uses gunicorn
-# -----------------------
+    return render_template("index.html", label=result)
