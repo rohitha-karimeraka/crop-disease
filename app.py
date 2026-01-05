@@ -22,7 +22,7 @@ class_names = [
     "healthy"
 ]
 
-CONFIDENCE_THRESHOLD = 0.70   # 👈 IMPORTANT
+CONFIDENCE_THRESHOLD = 0.85   # 👈 IMPORTANT
 
 def load_model_once():
     global model
@@ -59,6 +59,6 @@ def predict():
     if confidence < CONFIDENCE_THRESHOLD:
         result = "Sorry, we can’t predict this image"
     else:
-        result = f"{class_names[class_index]} (Confidence: {confidence*100:.2f}%)"
+        result = f"{class_names[class_index]}"
 
     return render_template("index.html", label=result)
