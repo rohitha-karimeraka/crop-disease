@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 MODEL_PATH = "crop_disease_model.h5"
-model = None   # 👈 IMPORTANT
+model = None   # model only once load avvadaniki
 
 class_names = [
     "Bacterial leaf blight",
@@ -22,6 +22,8 @@ class_names = [
     "healthy"
 ]
 
+CONFIDENCE_THRESHOLD = 0.70   # 👈 IMPORTANT
+
 def load_model_once():
     global model
     if model is None:
@@ -35,7 +37,7 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    load_model_once()   # 👈 model first request lo load avvutundi
+    load_model_once()
 
     if "image" not in request.files:
         return "No file uploaded"
@@ -47,8 +49,16 @@ def predict():
     img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
+    # 🔹 Prediction
     prediction = model.predict(img_array)
+
+    confidence = float(np.max(prediction))   # highest probability
     class_index = int(np.argmax(prediction))
-    result = class_names[class_index]
+
+    # 🔹 Confidence check
+    if confidence < CONFIDENCE_THRESHOLD:
+        result = "Sorry, we can’t predict this image"
+    else:
+        result = f"{class_names[class_index]} (Confidence: {confidence*100:.2f}%)"
 
     return render_template("index.html", label=result)
