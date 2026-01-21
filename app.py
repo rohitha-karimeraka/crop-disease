@@ -7,13 +7,20 @@ import os
 app = Flask(__name__)
 
 # ----------------------------
+# Upload folder (NEW)
+# ----------------------------
+UPLOAD_FOLDER = "static/uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# ----------------------------
 # Model path
 # ----------------------------
 MODEL_PATH = "crop_disease_model.h5"
 model = None   # model only once load avvadaniki
 
 # ----------------------------
-# Class names (training order lo undali)
+# Class names
 # ----------------------------
 class_names = [
     "Bacterial leaf blight",
@@ -29,7 +36,7 @@ class_names = [
 ]
 
 # ----------------------------
-# Thresholds (IMPORTANT)
+# Thresholds
 # ----------------------------
 CONFIDENCE_THRESHOLD = 0.75
 DIFFERENCE_THRESHOLD = 0.30
@@ -67,29 +74,37 @@ def predict():
         return render_template("index.html", label="❌ No file selected")
 
     try:
-        # Image processing
-        img = Image.open(file).convert("RGB")
+        # 🔹 SAVE IMAGE (NEW)
+        filename = file.filename
+        save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(save_path)
+
+        # 🔹 Image processing
+        img = Image.open(save_path).convert("RGB")
         img = img.resize((224, 224))
         img_array = np.array(img) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
 
-        # Prediction
+        # 🔹 Prediction
         prediction = model.predict(img_array)[0]
 
-        # Top probabilities
         sorted_probs = np.sort(prediction)[::-1]
         top1 = float(sorted_probs[0])
         top2 = float(sorted_probs[1])
 
         class_index = int(np.argmax(prediction))
 
-        # Decision logic
         if top1 < CONFIDENCE_THRESHOLD or (top1 - top2) < DIFFERENCE_THRESHOLD:
             result = "❌ Sorry, we can’t predict this image"
         else:
-            result = f" Disease: {class_names[class_index]}"
+            result = f"Disease: {class_names[class_index]}"
 
-        return render_template("index.html", label=result)
+        # 🔹 image_path pass chesthunna (NEW)
+        return render_template(
+            "index.html",
+            label=result,
+            image_path=f"uploads/{filename}"
+        )
 
     except Exception as e:
         print("Error:", e)

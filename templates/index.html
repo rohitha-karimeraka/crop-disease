@@ -17,9 +17,19 @@
         <button type="submit">Predict</button>
     </form>
 
+    {% if image_path %}
+        <div class="preview">
+            <img src="{{ url_for('static', filename=image_path) }}" width="250">
+        </div>
+    {% endif %}
+
     {% if label %}
         <div class="result">
-            {{ label }}
+            <p><b>{{ label }}</b></p>
+
+            {% if confidence %}
+                <p>Confidence: <b>{{ confidence }}%</b></p>
+            {% endif %}
         </div>
     {% endif %}
 </div>
